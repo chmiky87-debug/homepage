@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LCL vs FCL 물류비 비교 계산기 (Guide)</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface-soft: #EFEBE3;
+    --ink: #1A1A1A;
+    --ink-soft: #5C5A55;
+    --ink-faint: #8E8B83;
+    --line: rgba(26, 26, 26, 0.08);
+    --line-strong: rgba(26, 26, 26, 0.15);
+    --accent: #1B5E4A;
+    --accent-soft: #E1EFE9;
+    --accent-deep: #0D3D2E;
+    --warm: #B5532E;
+    --warm-soft: #FBEDE5;
+    --danger: #A23F32;
+    --danger-soft: #F8E4E0;
+    --gold: #8A6A1E;
+    --gold-soft: #F5EDD9;
+
+    /* LCL / FCL colors */
+    --lcl: #1B5E4A;
+    --lcl-soft: #E1EFE9;
+    --lcl-deep: #0D3D2E;
+    --fcl: #2B4C7A;
+    --fcl-soft: #E4ECF5;
+    --fcl-deep: #15263D;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 40px 20px;
+    font-feature-settings: "ss06";
+  }
+
+  .container { max-width: 1180px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: flex-end;
+  }
+  .header-left .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .header h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
+  .header .subtitle { margin-top: 4px; font-size: 12px; color: var(--ink-faint); letter-spacing: 0.05em; }
+
+  .fx-box {
+    background: var(--ink);
+    color: #F7F5F0;
+    border-radius: 4px;
+    padding: 16px 22px;
+    min-width: 240px;
+  }
+  .fx-box .fx-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: rgba(247, 245, 240, 0.6);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .fx-box .fx-input-row { display: flex; gap: 6px; }
+  .fx-box input {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #F7F5F0;
+    padding: 9px 11px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    width: 100%;
+    flex: 1;
+  }
+  .fx-box input:focus { outline: none; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.12); }
+  .fx-box .fx-refresh {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #F7F5F0;
+    border-radius: 3px;
+    padding: 0 12px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .fx-box .fx-refresh:hover { background: rgba(255, 255, 255, 0.18); }
+  .fx-box .fx-refresh.spinning { animation: fxspin 0.7s linear infinite; }
+  @keyframes fxspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .fx-box .fx-link {
+    display: block;
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(247, 245, 240, 0.8);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .fx-box .fx-link:hover { color: #F7F5F0; }
+  .fx-box .fx-note {
+    margin-top: 6px;
+    font-size: 9px;
+    line-height: 1.5;
+    color: rgba(247, 245, 240, 0.45);
+  }
+
+  /* Currency toggle */
+  .currency-toggle { display: flex; gap: 6px; margin-bottom: 8px; }
+  .currency-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: pointer;
+    padding: 5px 12px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--bg);
+    transition: all 0.15s ease;
+  }
+  .currency-toggle input[type="radio"] { accent-color: var(--accent); margin: 0; width: 12px; height: 12px; }
+  .currency-toggle label.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); font-weight: 600; }
+
+  /* Draft banner */
+  .draft-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gold-soft);
+    border: 1px dashed var(--gold);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 28px;
+    font-size: 12px;
+    color: #6b5417;
+  }
+  .draft-banner .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    background: var(--gold);
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* Layout */
+  .grid { display: grid; grid-template-columns: 380px 1fr; gap: 32px; }
+  @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+
+  /* Section */
+  .section { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 24px; }
+  .section + .section { margin-top: 20px; }
+
+  .section-title { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .section-title .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 3px 7px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+  .section-title h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: var(--ink); flex: 1; }
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  .field label { display: block; font-size: 11px; color: var(--ink-soft); margin-bottom: 6px; font-weight: 500; }
+  .field label .unit { color: var(--ink-faint); font-weight: 400; margin-left: 4px; }
+  .field input {
+    width: 100%;
+    padding: 9px 11px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 500;
+    transition: all 0.15s ease;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field input:hover { border-color: var(--line-strong); }
+  .field.lcl input { border-left: 3px solid var(--lcl); }
+  .field.fcl input { border-left: 3px solid var(--fcl); }
+
+  .footnote {
+    margin-top: 14px;
+    font-size: 10px;
+    color: var(--ink-faint);
+    font-style: italic;
+    line-height: 1.6;
+    padding-left: 10px;
+    border-left: 2px solid var(--line);
+  }
+
+  .breakdown {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line-strong);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .breakdown-row span:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+
+  /* Comparison area */
+  .comparison-header { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .mode-tab { padding: 14px 18px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+  .mode-tab.lcl { background: var(--lcl); color: #fff; }
+  .mode-tab.fcl { background: var(--fcl); color: #fff; }
+  .mode-tab .mode-name { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+  .mode-tab .mode-desc { font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: 0.85; }
+
+  .comparison-body { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .mode-result { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 22px; }
+  .mode-result.lcl { border-top: 3px solid var(--lcl); }
+  .mode-result.fcl { border-top: 3px solid var(--fcl); }
+
+  .ledger { border-top: 1px solid var(--line); padding-top: 4px; }
+  .ledger-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; font-size: 12px; border-bottom: 1px solid var(--line); }
+  .ledger-row .label { color: var(--ink-soft); }
+  .ledger-row .value { font-family: 'JetBrains Mono', monospace; font-weight: 500; letter-spacing: -0.01em; }
+  /* Final total display */
+  .total-display { margin-top: 16px; padding: 18px; border-radius: 4px; position: relative; overflow: hidden; }
+  .mode-result.lcl .total-display { background: var(--lcl-soft); border: 1px solid #C7DED4; }
+  .mode-result.fcl .total-display { background: var(--fcl-soft); border: 1px solid #C9D6E5; }
+  .total-display .label { font-size: 10px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 6px; }
+  .mode-result.lcl .total-display .label { color: var(--lcl); }
+  .mode-result.fcl .total-display .label { color: var(--fcl); }
+  .total-display .amount { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; }
+  .mode-result.lcl .total-display .amount { color: var(--lcl-deep); }
+  .mode-result.fcl .total-display .amount { color: var(--fcl-deep); }
+  .total-display .caveat { margin-top: 8px; font-size: 10px; color: var(--ink-faint); }
+
+  .winner-badge {
+    position: absolute; top: -8px; right: 14px;
+    background: #1A1A1A; color: #F7F5F0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 600;
+    padding: 3px 8px; border-radius: 2px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  .delta-summary {
+    margin-top: 20px; padding: 16px 20px;
+    background: var(--gold-soft); border-left: 3px solid var(--gold);
+    border-radius: 3px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  .delta-summary .delta-label { font-size: 12px; color: var(--gold); font-weight: 600; letter-spacing: 0.05em; }
+  .delta-summary .delta-text { font-size: 12px; color: var(--ink); }
+  .delta-summary .delta-amount { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--gold); }
+
+  .footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); text-align: center; font-size: 10px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
+
+  @media (max-width: 700px) {
+    body { padding: 20px 14px; }
+    .header { grid-template-columns: 1fr; }
+    .header h1 { font-size: 22px; }
+    .section { padding: 18px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .comparison-header { grid-template-columns: 1fr; }
+    .comparison-body { grid-template-columns: 1fr; }
+  }
+
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="header">
+    <div class="header-left">
+      <div class="eyebrow">Sea Import Cargo · LCL vs FCL Cost Comparison</div>
+      <h1>LCL / FCL 물류비 비교 계산기</h1>
+      <div class="subtitle">해상 수입화물 — 어떤 방식이 더 유리한지 자동 계산</div>
+    </div>
+    <div class="fx-box">
+      <div class="fx-label">적용 환율 (원/USD) · 시장환율 자동 조회</div>
+      <div class="fx-input-row">
+        <input type="text" inputmode="decimal" id="fx" value="1,380" />
+        <button type="button" class="fx-refresh" id="fxRefreshBtn" title="환율 새로고침">⟳</button>
+      </div>
+      <a class="fx-link" href="https://www.kebhana.com" target="_blank" rel="noopener">KEB하나은행 고시환율과 비교 ↗</a>
+      <div class="fx-note" id="fxSourceNote">환율 조회 중…</div>
+    </div>
+  </header>
+
+  <div class="draft-banner">
+    <span class="tag">NOTE</span>
+    <span>LCL 부대비용, FCL 부대비용, LCL 창고료 요율은 당사 통상 기준으로 산정하였으며, 경로, 물류사, 선사, 창고 요율 등에 따라 변동될 수 있으니, 해당 자료는 참조용으로만 확인 바랍니다.</span>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: Inputs -->
+    <div>
+
+      <div class="section">
+        <div class="section-title">
+          <span class="num">01</span>
+          <h2>화물 기본정보</h2>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>R.T <span class="unit">Revenue Ton</span></label>
+            <input type="text" inputmode="decimal" id="rt" value="12" />
+          </div>
+          <div class="field">
+            <label>Invoice Value</label>
+            <div class="currency-toggle">
+              <label class="active" data-currency="USD"><input type="radio" name="invCurrency" value="USD" checked> USD</label>
+              <label data-currency="KRW"><input type="radio" name="invCurrency" value="KRW"> KRW</label>
+            </div>
+            <input type="text" inputmode="decimal" id="invoiceValueUSD" placeholder="예: 18,000" value="18,000" />
+            <input type="text" inputmode="decimal" id="invoiceValueKRW" placeholder="예: 24,840,000" value="" style="display:none; margin-top: 8px;" />
+          </div>
+        </div>
+        <p class="footnote">Invoice Value는 USD 또는 KRW 중 하나만 입력하세요. LCL 창고료 계산 시 사용됩니다.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span class="num">02</span>
+          <h2>LCL 해상운임</h2>
+        </div>
+        <div class="form-grid">
+          <div class="field lcl">
+            <label>기본운임 단가 <span class="unit">USD/RT</span></label>
+            <input type="text" inputmode="decimal" id="lclFreightRate" value="20" />
+          </div>
+          <div class="field lcl">
+            <label>할증료 단가 <span class="unit">USD/RT</span></label>
+            <input type="text" inputmode="decimal" id="lclSurchargeRate" value="5" />
+          </div>
+        </div>
+        <p class="footnote">합계 = 단가 × R.T (자동 계산됩니다)</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span class="num">03</span>
+          <h2>FCL 해상운임</h2>
+        </div>
+        <div class="form-grid">
+          <div class="field fcl">
+            <label>기본운임 <span class="unit">USD, 총액</span></label>
+            <input type="text" inputmode="decimal" id="fclFreight" value="900" />
+          </div>
+          <div class="field fcl">
+            <label>할증료 합계 <span class="unit">USD, 총액</span></label>
+            <input type="text" inputmode="decimal" id="fclSurcharge" value="150" />
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span class="num">04</span>
+          <h2>LCL 부대비용</h2>
+        </div>
+        <div class="form-grid">
+          <div class="field lcl">
+            <label>RT당 단가 <span class="unit">원/RT</span></label>
+            <input type="text" inputmode="decimal" id="lclAncillaryRate" value="36,350" />
+          </div>
+        </div>
+        <p class="footnote">계산식 = R.T × RT당 단가</p>
+        <div class="breakdown">
+          <div class="breakdown-row"><span>36,350원/RT</span><span>콘솔사 도착지비용 (Document Fee 제외)</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span class="num">05</span>
+          <h2>FCL 부대비용</h2>
+        </div>
+        <div class="form-grid">
+          <div class="field fcl">
+            <label>고정 금액 <span class="unit">원</span></label>
+            <input type="text" inputmode="decimal" id="fclAncillaryFixed" value="439,333" />
+          </div>
+        </div>
+        <div class="breakdown">
+          <div class="breakdown-row"><span>189,333원</span><span>항만 부대비용 (Document Fee 제외)</span></div>
+          <div class="breakdown-row"><span>250,000원</span><span>셔틀료 + 적출작업료</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span class="num">06</span>
+          <h2>LCL 창고료</h2>
+        </div>
+        <div class="form-grid">
+          <div class="field lcl">
+            <label>Invoice 요율 <span class="unit">‰ (천분율)</span></label>
+            <input type="text" inputmode="decimal" id="whRate" value="6.1" />
+          </div>
+          <div class="field lcl">
+            <label>RT당 고정단가 <span class="unit">원/RT</span></label>
+            <input type="text" inputmode="decimal" id="whFixed" value="21,360" />
+          </div>
+          <div class="field lcl" style="grid-column: 1 / -1;">
+            <label>승수 <span class="unit">배율</span></label>
+            <input type="text" inputmode="decimal" id="whMultiplier" value="1.0143" />
+          </div>
+        </div>
+        <p class="footnote">계산식 = ( Invoice Value(원화 환산) × 요율/1000 + RT당 고정단가 × ROUNDUP(R.T, 0) ) × 승수. 상단 환율을 적용해 Invoice Value를 원화로 환산합니다.</p>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Comparison Results -->
+    <div>
+
+      <div class="comparison-header">
+        <div class="mode-tab lcl">
+          <span class="mode-name">LCL</span>
+          <span class="mode-desc" id="lclFxNote">해상운임 총 300 USD</span>
+        </div>
+        <div class="mode-tab fcl">
+          <span class="mode-name">FCL</span>
+          <span class="mode-desc" id="fclFxNote">해상운임 총 1,050 USD</span>
+        </div>
+      </div>
+
+      <div class="comparison-body">
+
+        <!-- LCL -->
+        <div class="mode-result lcl" id="resultLcl">
+          <div class="ledger">
+            <div class="ledger-row">
+              <span class="label">해상 기본운임</span>
+              <span class="value" id="lclFreightWon">0원</span>
+            </div>
+            <div class="ledger-row">
+              <span class="label">할증료</span>
+              <span class="value" id="lclSurchargeWon">0원</span>
+            </div>
+            <div class="ledger-row">
+              <span class="label">LCL 부대비용</span>
+              <span class="value" id="lclAncillaryWon">0원</span>
+            </div>
+            <div class="ledger-row">
+              <span class="label">LCL 창고료</span>
+              <span class="value" id="lclWarehouseWon">0원</span>
+            </div>
+          </div>
+          <div class="total-display">
+            <div class="label">LCL 총 물류비</div>
+            <div class="amount" id="lclTotal">0원</div>
+            <div class="caveat">통관비·내륙운송비 등은 별도입니다</div>
+          </div>
+        </div>
+
+        <!-- FCL -->
+        <div class="mode-result fcl" id="resultFcl">
+          <div class="ledger">
+            <div class="ledger-row">
+              <span class="label">해상 기본운임</span>
+              <span class="value" id="fclFreightWon">0원</span>
+            </div>
+            <div class="ledger-row">
+              <span class="label">할증료</span>
+              <span class="value" id="fclSurchargeWon">0원</span>
+            </div>
+            <div class="ledger-row">
+              <span class="label">FCL 부대비용</span>
+              <span class="value" id="fclAncillaryWon">0원</span>
+            </div>
+          </div>
+          <div class="total-display">
+            <div class="label">FCL 총 물류비</div>
+            <div class="amount" id="fclTotal">0원</div>
+            <div class="caveat">통관비·내륙운송비 등은 별도입니다</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="delta-summary">
+        <div>
+          <span class="delta-label">✓ 비교 결과 </span>
+          <span class="delta-text" id="deltaText">— 이 — 원 더 저렴</span>
+        </div>
+        <div>
+          <span class="delta-text">차액 </span>
+          <span class="delta-amount" id="deltaAmount">0원</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <footer class="footer">
+    LCL vs FCL 물류비 비교 계산기 · 통관비·내륙운송비 등 미포함
+  </footer>
+
+</div>
+
+<script>
+(function() {
+  const fmt = (n) => Math.round(n).toLocaleString('ko-KR') + '원';
+
+  function formatWithCommas(str) {
+    let cleaned = String(str).replace(/[^0-9.\-]/g, '');
+    if (cleaned === '' || cleaned === '-' || cleaned === '.') return cleaned;
+    const parts = cleaned.split('.');
+    let integerPart = parts[0];
+    const decimalPart = parts.length > 1 ? '.' + parts.slice(1).join('') : '';
+    let negative = '';
+    if (integerPart.startsWith('-')) { negative = '-'; integerPart = integerPart.slice(1); }
+    if (integerPart) integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return negative + integerPart + decimalPart;
+  }
+
+  function parseFormatted(str) {
+    if (str === null || str === undefined) return 0;
+    return parseFloat(String(str).replace(/,/g, '')) || 0;
+  }
+
+  function applyCommaFormat(input) {
+    input.value = formatWithCommas(input.value);
+    input.addEventListener('input', function(e) {
+      const cursorPos = e.target.selectionStart;
+      const oldValue = e.target.value;
+      const digitsBeforeCursor = (oldValue.slice(0, cursorPos).match(/[\d.\-]/g) || []).length;
+      const formatted = formatWithCommas(oldValue);
+      if (formatted === oldValue) return;
+      e.target.value = formatted;
+      let newPos = 0, count = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        if (/[\d.\-]/.test(formatted[i])) {
+          count++;
+          if (count === digitsBeforeCursor) { newPos = i + 1; break; }
+        }
+      }
+      if (digitsBeforeCursor === 0) newPos = 0;
+      try { e.target.setSelectionRange(newPos, newPos); } catch (err) {}
+    });
+  }
+
+  const ids = ['fx', 'rt', 'invoiceValueUSD', 'invoiceValueKRW', 'lclFreightRate', 'lclSurchargeRate', 'fclFreight', 'fclSurcharge',
+               'lclAncillaryRate', 'fclAncillaryFixed', 'whRate', 'whFixed', 'whMultiplier'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) applyCommaFormat(el); });
+
+  // ============= Invoice Value 통화 토글 =============
+  function updateCurrencyUI() {
+    const checked = document.querySelector('input[name="invCurrency"]:checked').value;
+    document.getElementById('invoiceValueUSD').style.display = checked === 'USD' ? '' : 'none';
+    document.getElementById('invoiceValueKRW').style.display = checked === 'KRW' ? '' : 'none';
+    document.querySelectorAll('.currency-toggle label').forEach(lbl => {
+      lbl.classList.toggle('active', lbl.dataset.currency === checked);
+    });
+  }
+  document.querySelectorAll('input[name="invCurrency"]').forEach(radio => {
+    radio.addEventListener('change', () => { updateCurrencyUI(); calc(); });
+  });
+
+  // ============= 환율 자동 조회 (시장환율, open.er-api.com) =============
+  async function fetchFxRate() {
+    const btn = document.getElementById('fxRefreshBtn');
+    const note = document.getElementById('fxSourceNote');
+    btn.classList.add('spinning');
+    note.textContent = '환율 조회 중…';
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      if (!res.ok) throw new Error('API 응답 오류');
+      const data = await res.json();
+      const rate = data && data.rates && data.rates.KRW;
+      if (!rate) throw new Error('KRW 환율을 찾을 수 없습니다');
+      document.getElementById('fx').value = formatWithCommas(String(Math.round(rate * 100) / 100));
+      const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      note.textContent = `시장 중간환율 자동 반영 · ${time} 조회 · 은행 T/T Selling 고시환율과는 스프레드만큼 차이 있음`;
+      calc();
+    } catch (err) {
+      note.textContent = '자동 조회 실패 — 인터넷 연결 확인 또는 환율을 직접 입력해주세요';
+    } finally {
+      btn.classList.remove('spinning');
+    }
+  }
+  document.getElementById('fxRefreshBtn').addEventListener('click', fetchFxRate);
+
+  function calc() {
+    const fx = parseFormatted(document.getElementById('fx').value);
+    const rt = parseFormatted(document.getElementById('rt').value);
+    const invCurrency = document.querySelector('input[name="invCurrency"]:checked').value;
+    const invoiceValueUSD = parseFormatted(document.getElementById('invoiceValueUSD').value);
+    const invoiceValueKRW = parseFormatted(document.getElementById('invoiceValueKRW').value);
+    const lclFreightRate = parseFormatted(document.getElementById('lclFreightRate').value);
+    const lclSurchargeRate = parseFormatted(document.getElementById('lclSurchargeRate').value);
+    const fclFreight = parseFormatted(document.getElementById('fclFreight').value);
+    const fclSurcharge = parseFormatted(document.getElementById('fclSurcharge').value);
+    const lclAncillaryRate = parseFormatted(document.getElementById('lclAncillaryRate').value);
+    const fclAncillaryFixed = parseFormatted(document.getElementById('fclAncillaryFixed').value);
+    const whRate = parseFormatted(document.getElementById('whRate').value);
+    const whFixed = parseFormatted(document.getElementById('whFixed').value);
+    const whMultiplier = parseFormatted(document.getElementById('whMultiplier').value);
+
+    const lclFreight = lclFreightRate * rt;
+    const lclSurcharge = lclSurchargeRate * rt;
+    const lclFreightWon = lclFreight * fx;
+    const lclSurchargeWon = lclSurcharge * fx;
+    const fclFreightWon = fclFreight * fx;
+    const fclSurchargeWon = fclSurcharge * fx;
+
+    const invoiceValueWon = invCurrency === 'USD' ? invoiceValueUSD * fx : invoiceValueKRW;
+    const lclAncillaryWon = rt * lclAncillaryRate;
+    const fclAncillaryWon = fclAncillaryFixed;
+    const lclWarehouseWon = (invoiceValueWon * whRate / 1000 + whFixed * Math.ceil(rt)) * whMultiplier;
+
+    const lclTotal = lclFreightWon + lclSurchargeWon + lclAncillaryWon + lclWarehouseWon;
+    const fclTotal = fclFreightWon + fclSurchargeWon + fclAncillaryWon;
+
+    document.getElementById('lclFreightWon').textContent = fmt(lclFreightWon);
+    document.getElementById('lclSurchargeWon').textContent = fmt(lclSurchargeWon);
+    document.getElementById('fclFreightWon').textContent = fmt(fclFreightWon);
+    document.getElementById('fclSurchargeWon').textContent = fmt(fclSurchargeWon);
+    document.getElementById('lclAncillaryWon').textContent = fmt(lclAncillaryWon);
+    document.getElementById('fclAncillaryWon').textContent = fmt(fclAncillaryWon);
+    document.getElementById('lclWarehouseWon').textContent = fmt(lclWarehouseWon);
+    document.getElementById('lclTotal').textContent = fmt(lclTotal);
+    document.getElementById('fclTotal').textContent = fmt(fclTotal);
+
+    document.getElementById('lclFxNote').textContent = `해상운임 총 ${(lclFreight + lclSurcharge).toLocaleString('ko-KR')} USD`;
+    document.getElementById('fclFxNote').textContent = `해상운임 총 ${(fclFreight + fclSurcharge).toLocaleString('ko-KR')} USD`;
+
+    document.querySelectorAll('.winner-badge').forEach(el => el.remove());
+    if (lclTotal !== fclTotal) {
+      const winner = lclTotal < fclTotal ? 'resultLcl' : 'resultFcl';
+      const badge = document.createElement('div');
+      badge.className = 'winner-badge';
+      badge.textContent = '★ 유리';
+      document.getElementById(winner).querySelector('.total-display').appendChild(badge);
+    }
+
+    const diff = Math.abs(lclTotal - fclTotal);
+    const better = lclTotal < fclTotal ? 'LCL' : (fclTotal < lclTotal ? 'FCL' : '동일');
+    document.getElementById('deltaText').textContent = better === '동일'
+      ? 'LCL·FCL 총 물류비가 동일합니다'
+      : `${better}이 ${fmt(diff)} 더 저렴`;
+    document.getElementById('deltaAmount').textContent = fmt(diff);
+  }
+
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', calc); });
+  updateCurrencyUI();
+  calc();
+  fetchFxRate();
+})();
+</script>
+</body>
+</html>
