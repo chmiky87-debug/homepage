@@ -253,36 +253,62 @@ function getOrientations(box, allowRotation){
   ];
 }
 
+// Layer-based packing: fills the floor footprint of a layer with a 2D guillotine
+// packer, then stacks the next layer on top using the leftover height. Items that
+// don't fit in one layer's footprint roll over and get another chance in the next
+// (higher) layer, instead of being stranded by 3D free-space fragmentation.
 function packContainer(container, unitBoxes, allowRotation){
-  let freeSpaces = [{x:0,y:0,z:0, w:container.w, h:container.h, d:container.l}];
-  const sorted = [...unitBoxes].sort((a,b)=> (b.l*b.w*b.h)-(a.l*a.w*a.h));
+  let remaining = [...unitBoxes].sort((a,b)=> (b.l*b.w*b.h)-(a.l*a.w*a.h));
   const placed = [];
-  const unplacedMap = {};
+  let y = 0;
 
-  for(const box of sorted){
-    const orientations = getOrientations(box, allowRotation);
-    let bestIdx=-1, bestOrient=null, bestScore=Infinity;
-    for(let i=0;i<freeSpaces.length;i++){
-      const fs = freeSpaces[i];
-      for(const o of orientations){
-        if(o.w<=fs.w+1e-6 && o.h<=fs.h+1e-6 && o.d<=fs.d+1e-6){
-          const score = fs.y*1e6 + fs.z*1e3 + fs.x;
-          if(score < bestScore){ bestScore=score; bestIdx=i; bestOrient=o; }
+  while(remaining.length>0 && y < container.h - 1e-6){
+    const remainingHeight = container.h - y;
+    let freeRects = [{x:0, z:0, w:container.w, d:container.l}];
+    let layerHeight = 0;
+    const layerItems = remaining;
+    remaining = [];
+
+    while(layerItems.length>0){
+      let placedOne = false;
+      for(let i=0;i<layerItems.length;i++){
+        const box = layerItems[i];
+        const orientations = getOrientations(box, allowRotation).filter(o=> o.h <= remainingHeight + 1e-6);
+        if(orientations.length===0) continue;
+
+        let bestRectIdx=-1, bestOrient=null, bestScore=Infinity;
+        for(let r=0;r<freeRects.length;r++){
+          const fr = freeRects[r];
+          for(const o of orientations){
+            if(o.w<=fr.w+1e-6 && o.d<=fr.d+1e-6){
+              const score = fr.z*1e3 + fr.x;
+              if(score < bestScore){ bestScore=score; bestRectIdx=r; bestOrient=o; }
+            }
+          }
         }
+        if(bestRectIdx===-1) continue;
+
+        const fr = freeRects[bestRectIdx];
+        const o = bestOrient;
+        placed.push({...box, x:fr.x, y:y, z:fr.z, w:o.w, h:o.h, d:o.d});
+        layerHeight = Math.max(layerHeight, o.h);
+        freeRects.splice(bestRectIdx,1);
+        if(fr.w-o.w > 1e-6) freeRects.push({x:fr.x+o.w, z:fr.z, w:fr.w-o.w, d:fr.d});
+        if(fr.d-o.d > 1e-6) freeRects.push({x:fr.x, z:fr.z+o.d, w:o.w, d:fr.d-o.d});
+        layerItems.splice(i,1);
+        placedOne = true;
+        break;
       }
+      if(!placedOne) break;
     }
-    if(bestIdx===-1){
-      unplacedMap[box.name] = (unplacedMap[box.name]||0)+1;
-      continue;
-    }
-    const fs = freeSpaces[bestIdx];
-    const o = bestOrient;
-    placed.push({...box, x:fs.x, y:fs.y, z:fs.z, w:o.w, h:o.h, d:o.d});
-    freeSpaces.splice(bestIdx,1);
-    if(fs.w - o.w > 1e-6) freeSpaces.push({x:fs.x+o.w, y:fs.y, z:fs.z, w:fs.w-o.w, h:fs.h, d:fs.d});
-    if(fs.h - o.h > 1e-6) freeSpaces.push({x:fs.x, y:fs.y+o.h, z:fs.z, w:o.w, h:fs.h-o.h, d:o.d});
-    if(fs.d - o.d > 1e-6) freeSpaces.push({x:fs.x, y:fs.y, z:fs.z+o.d, w:o.w, h:o.h, d:fs.d-o.d});
+
+    remaining = layerItems;
+    if(layerHeight===0) break; // nothing fits even in a fresh full-footprint layer
+    y += layerHeight;
   }
+
+  const unplacedMap = {};
+  remaining.forEach(box=>{ unplacedMap[box.name] = (unplacedMap[box.name]||0)+1; });
   return { placed, unplacedMap };
 }
 
