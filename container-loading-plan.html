@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Container Loading Plan</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --panel2:#1a2236; --border:#2a3550;
+    --text:#e5e9f2; --muted:#94a3b8; --accent:#3b82f6; --accent2:#22c55e;
+    --warn:#f59e0b; --danger:#ef4444;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:"Segoe UI",Pretendard,Arial,sans-serif;
+    background:var(--bg); color:var(--text); height:100vh; overflow:hidden;
+  }
+  header{
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:12px; background:var(--panel);
+  }
+  header h1{font-size:17px; margin:0; font-weight:600;}
+  header span{color:var(--muted); font-size:12px;}
+  .layout{display:flex; height:calc(100vh - 49px);}
+  .panel{
+    width:440px; min-width:400px; background:var(--panel); border-right:1px solid var(--border);
+    padding:16px; overflow-y:auto;
+  }
+  .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:18px 0 8px;}
+  .panel h2:first-child{margin-top:0;}
+  .field-row{display:flex; gap:8px; margin-bottom:8px;}
+  .field{flex:1; display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--muted);}
+  select, input[type=number], input[type=text]{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    border-radius:6px; padding:6px 8px; font-size:13px; width:100%;
+  }
+  input[type=checkbox]{accent-color:var(--accent);}
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button{ -webkit-appearance:none; margin:0; }
+  input[type=number]{ -moz-appearance:textfield; }
+  .checkbox-row{display:flex; align-items:center; gap:6px; font-size:13px; margin:6px 0;}
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  th{color:var(--muted); font-weight:500; text-align:left; padding:4px 3px; border-bottom:1px solid var(--border);}
+  td{padding:3px 2px;}
+  td input{width:100%; padding:4px 5px; font-size:12px;}
+  .cargo-table-wrap{max-height:260px; overflow-y:auto; overflow-x:auto; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; padding:6px;}
+  .cargo-table-wrap table{min-width:100%;}
+  .cargo-table-wrap th, .cargo-table-wrap td{white-space:nowrap;}
+  .swatch{width:14px; height:14px; border-radius:3px; display:inline-block; border:1px solid rgba(255,255,255,.3);}
+  .btn{
+    background:var(--accent); color:#fff; border:none; border-radius:6px;
+    padding:9px 12px; font-size:13px; cursor:pointer; font-weight:600; width:100%;
+  }
+  .btn:hover{filter:brightness(1.1);}
+  .btn.secondary{background:var(--panel2); border:1px solid var(--border); color:var(--text); font-weight:500;}
+  .btn.small{width:auto; padding:4px 8px; font-size:11px; font-weight:500;}
+  .btn.remove{background:transparent; border:1px solid var(--border); color:var(--danger); padding:3px 7px; font-size:11px; border-radius:5px; cursor:pointer;}
+  .row-gap{display:flex; gap:8px; margin-top:8px;}
+  .viewport{flex:1; position:relative; overflow:hidden; background:radial-gradient(circle at 50% 30%, #17203a 0%, #0b1120 75%);}
+  .scene-holder{
+    width:100%; height:100%; perspective:1600px; cursor:grab;
+  }
+  .scene-holder:active{cursor:grabbing;}
+  #world{
+    position:absolute; top:50%; left:50%; transform-style:preserve-3d;
+  }
+  .cube{position:absolute; transform-style:preserve-3d;}
+  .face{position:absolute; backface-visibility:hidden; box-sizing:border-box;}
+  .hud{
+    position:absolute; top:14px; right:14px; background:rgba(17,24,39,.9);
+    border:1px solid var(--border); border-radius:10px; padding:14px 16px;
+    font-size:12.5px; min-width:230px; backdrop-filter:blur(4px);
+  }
+  .hud h3{margin:0 0 8px; font-size:13px; color:var(--text);}
+  .hud .stat{display:flex; justify-content:space-between; margin:3px 0; color:var(--muted);}
+  .hud .stat b{color:var(--text); font-weight:600;}
+  .bar{height:6px; background:var(--panel2); border-radius:4px; overflow:hidden; margin:4px 0 8px;}
+  .bar > div{height:100%; background:var(--accent2);}
+  .bar > div.warn{background:var(--warn);}
+  .bar > div.danger{background:var(--danger);}
+  .unplaced{margin-top:8px; padding-top:8px; border-top:1px solid var(--border); color:var(--warn); font-size:12px;}
+  .hint{
+    position:absolute; bottom:14px; left:14px; color:var(--muted); font-size:11.5px;
+    background:rgba(17,24,39,.7); padding:6px 10px; border-radius:8px; border:1px solid var(--border);
+  }
+  .legend{
+    position:absolute; bottom:14px; right:14px; background:rgba(17,24,39,.9);
+    border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:11.5px;
+    max-width:220px; max-height:180px; overflow-y:auto;
+  }
+  .legend div{display:flex; align-items:center; gap:6px; margin:3px 0;}
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:#334155; border-radius:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📦 Container Loading Plan</h1>
+  <span>컨테이너 적재 시뮬레이터 — 드래그로 회전, 스크롤로 확대/축소</span>
+</header>
+
+<div class="layout">
+  <div class="panel">
+    <h2>컨테이너</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>규격</label>
+        <select id="containerPreset"></select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>내부 길이 L(cm)</label><input type="number" id="cL"></div>
+      <div class="field"><label>내부 너비 W(cm)</label><input type="number" id="cW"></div>
+      <div class="field"><label>내부 높이 H(cm)</label><input type="number" id="cH"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>최대 적재중량(kg)</label><input type="number" id="cMaxWeight"></div>
+    </div>
+
+    <h2>화물 목록</h2>
+    <div class="cargo-table-wrap">
+      <table>
+        <thead>
+          <tr><th></th><th>품명</th><th>L</th><th>W</th><th>H</th><th>중량</th><th>수량</th><th></th></tr>
+        </thead>
+        <tbody id="cargoBody"></tbody>
+      </table>
+    </div>
+    <button class="btn secondary" id="addRowBtn">+ 화물 추가</button>
+
+    <h2>옵션</h2>
+    <div class="checkbox-row">
+      <input type="checkbox" id="allowRotation" checked>
+      <label for="allowRotation">박스 회전 허용 (6방향 적재 시도)</label>
+    </div>
+
+    <div class="row-gap" style="margin-top:16px;">
+      <button class="btn" id="calcBtn">적재 계획 계산</button>
+    </div>
+    <div class="row-gap">
+      <button class="btn secondary" id="resetViewBtn">시점 초기화</button>
+    </div>
+  </div>
+
+  <div class="viewport">
+    <div class="scene-holder" id="sceneHolder">
+      <div id="world"></div>
+    </div>
+    <div class="hud" id="hud">
+      <h3>적재 결과</h3>
+      <div class="stat"><span>컨테이너 용적</span><b id="statContVol">-</b></div>
+      <div class="stat"><span>사용 용적</span><b id="statUsedVol">-</b></div>
+      <div class="bar"><div id="volBar" style="width:0%"></div></div>
+      <div class="stat"><span>총 중량</span><b id="statWeight">-</b></div>
+      <div class="bar"><div id="wBar" style="width:0%"></div></div>
+      <div class="stat"><span>적재 박스</span><b id="statBoxes">-</b></div>
+      <div id="unplacedBox"></div>
+    </div>
+    <div class="legend" id="legend" style="display:none;"></div>
+    <div class="hint">마우스 드래그: 회전 · 휠: 확대/축소</div>
+  </div>
+</div>
+
+<script>
+const CONTAINERS = {
+  "20ft (Dry Standard)": { l:589.8, w:235.2, h:239.3, maxWeight:28200 },
+  "40ft (Dry Standard)": { l:1203.2, w:235.2, h:239.3, maxWeight:28800 },
+  "40ft HC (High Cube)": { l:1203.2, w:235.2, h:269.8, maxWeight:28600 },
+  "45ft HC (High Cube)": { l:1355.6, w:235.2, h:269.8, maxWeight:27600 },
+  "직접 입력": { l:1203.2, w:235.2, h:269.8, maxWeight:28600 },
+};
+
+const presetSel = document.getElementById('containerPreset');
+Object.keys(CONTAINERS).forEach(name=>{
+  const o=document.createElement('option'); o.value=name; o.textContent=name;
+  presetSel.appendChild(o);
+});
+presetSel.value = "40ft HC (High Cube)";
+
+const cL=document.getElementById('cL'), cW=document.getElementById('cW'),
+      cH=document.getElementById('cH'), cMaxWeight=document.getElementById('cMaxWeight');
+
+function applyPreset(){
+  const p = CONTAINERS[presetSel.value];
+  cL.value=p.l; cW.value=p.w; cH.value=p.h; cMaxWeight.value=p.maxWeight;
+}
+presetSel.addEventListener('change', applyPreset);
+applyPreset();
+
+let cargoItems = [];
+let idSeq = 1;
+function addCargoRow(data){
+  const d = Object.assign({name:'Box', l:100, w:100, h:100, weight:100, qty:5}, data||{});
+  d.id = idSeq++;
+  cargoItems.push(d);
+  renderCargoTable();
+}
+function removeCargoRow(id){
+  cargoItems = cargoItems.filter(x=>x.id!==id);
+  renderCargoTable();
+}
+function renderCargoTable(){
+  const body = document.getElementById('cargoBody');
+  body.innerHTML='';
+  cargoItems.forEach((item)=>{
+    const color = colorForId(item.id);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="swatch" style="background:${color}"></span></td>
+      <td><input type="text" data-field="name" value="${item.name}" style="width:60px"></td>
+      <td><input type="number" data-field="l" value="${item.l}" style="width:52px"></td>
+      <td><input type="number" data-field="w" value="${item.w}" style="width:52px"></td>
+      <td><input type="number" data-field="h" value="${item.h}" style="width:52px"></td>
+      <td><input type="number" data-field="weight" value="${item.weight}" style="width:58px"></td>
+      <td><input type="number" data-field="qty" value="${item.qty}" style="width:48px"></td>
+      <td><button class="btn remove">×</button></td>
+    `;
+    tr.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const f = inp.dataset.field;
+        item[f] = (f==='name') ? inp.value : parseFloat(inp.value)||0;
+      });
+    });
+    tr.querySelector('.remove').addEventListener('click', ()=>removeCargoRow(item.id));
+    body.appendChild(tr);
+  });
+}
+function colorForId(id){
+  const hue = (id*67)%360;
+  return `hsl(${hue},65%,55%)`;
+}
+
+document.getElementById('addRowBtn').addEventListener('click', ()=>addCargoRow({name:'Box '+String.fromCharCode(65+cargoItems.length%26)}));
+
+// seed example data
+addCargoRow({name:'Pallet A', l:120, w:100, h:100, weight:250, qty:12});
+addCargoRow({name:'Carton B', l:60, w:40, h:40, weight:20, qty:40});
+addCargoRow({name:'Drum C', l:60, w:60, h:90, weight:180, qty:8});
+
+// ---------- Bin packing (3D guillotine) ----------
+function getOrientations(box, allowRotation){
+  const dims = [box.w, box.h, box.l];
+  if(!allowRotation) return [{w:dims[0], h:dims[1], d:dims[2]}];
+  return [
+    {w:dims[0],h:dims[1],d:dims[2]},
+    {w:dims[0],h:dims[2],d:dims[1]},
+    {w:dims[1],h:dims[0],d:dims[2]},
+    {w:dims[1],h:dims[2],d:dims[0]},
+    {w:dims[2],h:dims[0],d:dims[1]},
+    {w:dims[2],h:dims[1],d:dims[0]},
+  ];
+}
+
+function packContainer(container, unitBoxes, allowRotation){
+  let freeSpaces = [{x:0,y:0,z:0, w:container.w, h:container.h, d:container.l}];
+  const sorted = [...unitBoxes].sort((a,b)=> (b.l*b.w*b.h)-(a.l*a.w*a.h));
+  const placed = [];
+  const unplacedMap = {};
+
+  for(const box of sorted){
+    const orientations = getOrientations(box, allowRotation);
+    let bestIdx=-1, bestOrient=null, bestScore=Infinity;
+    for(let i=0;i<freeSpaces.length;i++){
+      const fs = freeSpaces[i];
+      for(const o of orientations){
+        if(o.w<=fs.w+1e-6 && o.h<=fs.h+1e-6 && o.d<=fs.d+1e-6){
+          const score = fs.y*1e6 + fs.z*1e3 + fs.x;
+          if(score < bestScore){ bestScore=score; bestIdx=i; bestOrient=o; }
+        }
+      }
+    }
+    if(bestIdx===-1){
+      unplacedMap[box.name] = (unplacedMap[box.name]||0)+1;
+      continue;
+    }
+    const fs = freeSpaces[bestIdx];
+    const o = bestOrient;
+    placed.push({...box, x:fs.x, y:fs.y, z:fs.z, w:o.w, h:o.h, d:o.d});
+    freeSpaces.splice(bestIdx,1);
+    if(fs.w - o.w > 1e-6) freeSpaces.push({x:fs.x+o.w, y:fs.y, z:fs.z, w:fs.w-o.w, h:fs.h, d:fs.d});
+    if(fs.h - o.h > 1e-6) freeSpaces.push({x:fs.x, y:fs.y+o.h, z:fs.z, w:o.w, h:fs.h-o.h, d:o.d});
+    if(fs.d - o.d > 1e-6) freeSpaces.push({x:fs.x, y:fs.y, z:fs.z+o.d, w:o.w, h:o.h, d:fs.d-o.d});
+  }
+  return { placed, unplacedMap };
+}
+
+const MAX_UNIT_BOXES = 400;
+
+function expandUnitBoxes(items){
+  const units = [];
+  let truncated = false;
+  let count = 0;
+  items.forEach((item)=>{
+    const color = colorForId(item.id);
+    for(let i=0;i<item.qty;i++){
+      if(count >= MAX_UNIT_BOXES){ truncated = true; return; }
+      units.push({ name:item.name, l:item.l, w:item.w, h:item.h, weight:item.weight, color });
+      count++;
+    }
+  });
+  return { units, truncated };
+}
+
+// ---------- 3D rendering ----------
+const world = document.getElementById('world');
+let rotX = -22, rotY = -35, zoom = 1;
+
+function applyWorldTransform(){
+  world.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${zoom})`;
+}
+applyWorldTransform();
+
+const sceneHolder = document.getElementById('sceneHolder');
+let dragging=false, lastX=0, lastY=0;
+sceneHolder.addEventListener('mousedown', e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; });
+window.addEventListener('mouseup', ()=> dragging=false);
+window.addEventListener('mousemove', e=>{
+  if(!dragging) return;
+  const dx = e.clientX-lastX, dy = e.clientY-lastY;
+  lastX=e.clientX; lastY=e.clientY;
+  rotY += dx*0.4;
+  rotX -= dy*0.4;
+  rotX = Math.max(-85, Math.min(85, rotX));
+  applyWorldTransform();
+});
+sceneHolder.addEventListener('wheel', e=>{
+  e.preventDefault();
+  zoom *= (e.deltaY>0)? 0.9 : 1.1;
+  zoom = Math.max(0.2, Math.min(4, zoom));
+  applyWorldTransform();
+}, {passive:false});
+
+document.getElementById('resetViewBtn').addEventListener('click', ()=>{
+  rotX=-22; rotY=-35; zoom=1; applyWorldTransform();
+});
+
+function makeCube({w,h,d,x,y,z, faceColor, borderColor, opacity}){
+  const cube = document.createElement('div');
+  cube.className='cube';
+  cube.style.transform = `translate3d(${x}px, ${-y}px, ${z}px)`;
+
+  const specs = [
+    {name:'front',  w:w, h:h, transform:`translateZ(${d/2}px)`},
+    {name:'back',   w:w, h:h, transform:`rotateY(180deg) translateZ(${d/2}px)`},
+    {name:'right',  w:d, h:h, transform:`rotateY(90deg) translateZ(${w/2}px)`},
+    {name:'left',   w:d, h:h, transform:`rotateY(-90deg) translateZ(${w/2}px)`},
+    {name:'top',    w:w, h:d, transform:`rotateX(90deg) translateZ(${h/2}px)`},
+    {name:'bottom', w:w, h:d, transform:`rotateX(-90deg) translateZ(${h/2}px)`},
+  ];
+  specs.forEach(s=>{
+    const f = document.createElement('div');
+    f.className='face';
+    f.style.width = s.w+'px';
+    f.style.height = s.h+'px';
+    f.style.left = (-s.w/2)+'px';
+    f.style.top = (-s.h/2)+'px';
+    f.style.transform = s.transform;
+    f.style.background = faceColor;
+    f.style.border = `1px solid ${borderColor}`;
+    cube.appendChild(f);
+  });
+  return cube;
+}
+
+function render3D(container, placed){
+  world.innerHTML='';
+  const maxDim = Math.max(container.l, container.w, container.h);
+  const scale = 300 / maxDim;
+
+  const contCube = makeCube({
+    w: container.w*scale, h: container.h*scale, d: container.l*scale,
+    x: container.w*scale/2, y: container.h*scale/2, z: container.l*scale/2,
+    faceColor: 'rgba(59,130,246,0.06)', borderColor: 'rgba(96,165,250,0.65)'
+  });
+  contCube.style.zIndex = 0;
+  world.appendChild(contCube);
+
+  placed.forEach(p=>{
+    const cube = makeCube({
+      w: p.w*scale, h: p.h*scale, d: p.d*scale,
+      x: (p.x + p.w/2)*scale, y: (p.y + p.h/2)*scale, z: (p.z + p.d/2)*scale,
+      faceColor: p.color, borderColor: 'rgba(0,0,0,0.45)'
+    });
+    world.appendChild(cube);
+  });
+}
+
+function renderLegend(items){
+  const legend = document.getElementById('legend');
+  if(items.length===0){ legend.style.display='none'; return; }
+  legend.style.display='block';
+  legend.innerHTML = items.map((item)=>
+    `<div><span class="swatch" style="background:${colorForId(item.id)}"></span>${item.name} (${item.qty})</div>`
+  ).join('');
+}
+
+function fmt(n){ return n.toLocaleString('ko-KR', {maximumFractionDigits:2}); }
+
+document.getElementById('calcBtn').addEventListener('click', ()=>{
+  const container = {
+    l: parseFloat(cL.value)||1, w: parseFloat(cW.value)||1, h: parseFloat(cH.value)||1,
+  };
+  const maxWeight = parseFloat(cMaxWeight.value)||0;
+  const allowRotation = document.getElementById('allowRotation').checked;
+
+  const validItems = cargoItems.filter(it=> it.l>0 && it.w>0 && it.h>0 && it.qty>0);
+  const { units, truncated } = expandUnitBoxes(validItems);
+
+  const { placed, unplacedMap } = packContainer(container, units, allowRotation);
+
+  render3D(container, placed);
+  renderLegend(validItems);
+
+  const contVol = (container.l*container.w*container.h)/1e6; // cm^3 -> m^3
+  const usedVol = placed.reduce((s,p)=> s + (p.w*p.h*p.d)/1e6, 0);
+  const usedWeight = placed.reduce((s,p)=> s + p.weight, 0);
+  const totalBoxes = units.length;
+
+  document.getElementById('statContVol').textContent = fmt(contVol)+' m³';
+  document.getElementById('statUsedVol').textContent = fmt(usedVol)+' m³ ('+fmt(usedVol/contVol*100)+'%)';
+  const volPct = Math.min(100, usedVol/contVol*100);
+  const volBar = document.getElementById('volBar');
+  volBar.style.width = volPct+'%';
+  volBar.className = volPct>95? 'danger' : volPct>80? 'warn' : '';
+
+  const wPct = maxWeight>0 ? Math.min(100, usedWeight/maxWeight*100) : 0;
+  document.getElementById('statWeight').textContent = fmt(usedWeight)+' kg / '+fmt(maxWeight)+' kg ('+fmt(wPct)+'%)';
+  const wBar = document.getElementById('wBar');
+  wBar.style.width = wPct+'%';
+  wBar.className = wPct>95? 'danger' : wPct>80? 'warn' : '';
+
+  document.getElementById('statBoxes').textContent = `${placed.length} / ${totalBoxes}`;
+
+  const unplacedBox = document.getElementById('unplacedBox');
+  const unplacedNames = Object.keys(unplacedMap);
+  let msg='';
+  if(unplacedNames.length>0){
+    msg += '<div class="unplaced">⚠ 미적재: ' + unplacedNames.map(n=>`${n} ${unplacedMap[n]}개`).join(', ') + '</div>';
+  }
+  if(truncated){
+    msg += `<div class="unplaced">⚠ 박스 수량이 많아 계산상 최대 ${MAX_UNIT_BOXES}개까지만 반영했습니다.</div>`;
+  }
+  unplacedBox.innerHTML = msg;
+});
+
+document.getElementById('calcBtn').click();
+</script>
+</body>
+</html>
